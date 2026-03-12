@@ -1,0 +1,150 @@
+import { cookies } from "next/headers";
+import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
+import { getBackendBaseUrl } from "./backend";
+import type { PostDetailResponse, PostDetailAuthor } from "@/lib/social/types";
+
+type ErrorShape = {
+  message?: string;
+  status?: number;
+  timestamp?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function extractMessage(payload: unknown, fallback: string): string {
+  if (typeof payload === "string") return payload || fallback;
+  if (isRecord(payload) && typeof payload.message === "string")
+    return payload.message || fallback;
+  return fallback;
+}
+
+function parsePostDetailResponse(value: unknown): PostDetailResponse | null {
+  if (!isRecord(value)) return null;
+
+  const id = typeof value.id === "string" ? value.id : null;
+  const title = typeof value.title === "string" ? value.title : null;
+  // Content can be null for locked/password-protected posts
+  const content = typeof value.content === "string" ? value.content : null;
+
+  // Only id and title are required; content can be null for locked posts
+  if (!id || !title) return null;
+
+  const locked = typeof value.locked === "boolean" ? value.locked : false;
+  const cover = typeof value.cover === "string" ? value.cover : undefined;
+  const caption = typeof value.caption === "string" ? value.caption : undefined;
+  const visibility =
+    typeof value.visibility === "string" ? value.visibility : "PUBLIC";
+
+  // Parse author - backend returns { authorId, username }
+  let author: PostDetailAuthor = { authorId: "", username: "unknown" };
+  if (isRecord(value.author)) {
+    author = {
+      authorId:
+        typeof value.author.authorId === "string" ? value.author.authorId : "",
+      username:
+        typeof value.author.username === "string"
+          ? value.author.username
+          : "unknown",
+    };
+  }
+
+  // Parse myReaction
+  let myReaction: "LIKE" | "DISLIKE" | null | undefined = undefined;
+  if (value.myReaction === "LIKE" || value.myReaction === "DISLIKE") {
+    myReaction = value.myReaction;
+  }
+
+  // Parse tags
+  let tags: string[] = [];
+  if (Array.isArray(value.tags)) {
+    tags = value.tags.filter((t): t is string => typeof t === "string");
+  }
+
+  const createdAt =
+    typeof value.createdAt === "string"
+      ? value.createdAt
+      : new Date().toISOString();
+  const updatedAt =
+    typeof value.updatedAt === "string"
+      ? value.updatedAt
+      : new Date().toISOString();
+
+  // Parse reaction counts
+  const likeCount = typeof value.likeCount === "number" ? value.likeCount : 0;
+  const dislikeCount =
+    typeof value.dislikeCount === "number" ? value.dislikeCount : 0;
+
+  // Parse topic - backend returns TopicInfoResponse { id, name } or null
+  let topic: { id: string; name: string } | null = null;
+  if (isRecord(value.topic)) {
+    const topicId = typeof value.topic.id === "string" ? value.topic.id : null;
+    const topicName =
+      typeof value.topic.name === "string" ? value.topic.name : null;
+    if (topicId && topicName) {
+      topic = { id: topicId, name: topicName };
+    }
+  }
+
+  return {
+    id,
+    title,
+    content,
+    locked,
+    cover,
+    caption,
+    visibility,
+    author,
+    myReaction,
+    tags,
+    topic,
+    createdAt,
+    updatedAt,
+    likeCount,
+    dislikeCount,
+  };
+}
+
+/**
+ * Server-side function to fetch post detail
+ * Designed for use in Server Components (SSR)
+ * Supports both authenticated and guest access
+ */
+export async function fetchPostDetailServer(
+  postId: string,
+): Promise<PostDetailResponse> {
+  const backendBaseUrl = getBackendBaseUrl();
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_TOKEN_COOKIE)?.value;
+
+  // Token is optional - guests can view public posts
+  // Backend handles both authenticated and unauthenticated requests
+  const headers: HeadersInit = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${backendBaseUrl}/social/posts/${postId}`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const fallback = `Request failed (${res.status} ${res.statusText})`;
+    throw new Error(extractMessage(payload, fallback));
+  }
+
+  const parsed = parsePostDetailResponse(payload);
+  if (!parsed) {
+    throw new Error("Invalid post response format");
+  }
+
+  return parsed;
+}
