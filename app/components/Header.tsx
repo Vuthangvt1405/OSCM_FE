@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { Bell, LogIn, PencilLine, Search, UserPlus } from "lucide-react";
-import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
-import { getBackendBaseUrl } from "@/lib/server/backend";
 import { SidebarMenuButtonWrapper } from "@/features/sidebar";
+import { SearchBarCompact } from "@/features/search/components/SearchBar";
+import { getCurrentUserOrNullServer } from "@/lib/server/social";
 
 type HeaderActionProps = {
   href: string;
@@ -50,57 +49,18 @@ function getInitials(name: string) {
 }
 
 async function getHeaderUser(): Promise<HeaderUser | null> {
-  const token = (await cookies()).get(AUTH_TOKEN_COOKIE)?.value;
-  if (!token) return null;
+  // Use the server-side function which reads cookies directly
+  // This works in Server Components unlike the client-side getCurrentUserOrNull
+  // Returns null for 401 (not authenticated) or 403 (no social profile)
+  const payload = await getCurrentUserOrNullServer();
 
-  const backendBaseUrl = getBackendBaseUrl();
-
-  let payload: unknown;
-  try {
-    const res = await fetch(`${backendBaseUrl}/social/me`, {
-      method: "GET",
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) return null;
-    payload = await res.json();
-  } catch {
+  // If no user (auth failed or no profile), return null to show login
+  if (!payload) {
     return null;
   }
 
-  let displayName = "User";
-
-  let avatarUrl: string | null = null;
-
-  if (isRecord(payload)) {
-    const nameCandidate =
-      (typeof payload.name === "string" && payload.name) ||
-      (typeof payload.fullName === "string" && payload.fullName) ||
-      (typeof payload.username === "string" && payload.username) ||
-      (typeof payload.email === "string" && payload.email) ||
-      (typeof payload.displayName === "string" && payload.displayName) ||
-      "";
-
-    if (nameCandidate) displayName = nameCandidate;
-
-    const pictureUrl =
-      (typeof payload.profilePictureUrl === "string" &&
-        payload.profilePictureUrl.trim()) ||
-      (typeof payload.avatarUrl === "string" && payload.avatarUrl.trim()) ||
-      "";
-    if (pictureUrl) {
-      if (
-        pictureUrl.startsWith("/") ||
-        pictureUrl.startsWith("http://") ||
-        pictureUrl.startsWith("https://")
-      ) {
-        avatarUrl = pictureUrl;
-      }
-    }
-  }
+  const displayName = payload.displayName || payload.username || "User";
+  const avatarUrl = payload.profilePictureUrl || null;
 
   return {
     displayName,
@@ -125,6 +85,7 @@ const dropDownComponent = [
 export async function SiteHeader({ children }: SiteHeaderProps) {
   const user = await getHeaderUser();
 
+  console.log("user:", user);
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-(--header-border) bg-(--header-bg) shadow-(--header-shadow) backdrop-blur relative">
@@ -150,14 +111,7 @@ export async function SiteHeader({ children }: SiteHeaderProps) {
             <Search className="h-4 w-4" />
           </button>
 
-          <div className="hidden w-full max-w-[560px] items-center gap-2 rounded-full border border-(--header-control-border) bg-(--header-control-bg) px-3 transition hover:bg-(--header-control-hover) focus-within:bg-(--header-control-hover) sm:flex">
-            <Search className="h-4 w-4 text-slate-500" />
-            <input
-              className="h-9 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-slate-500"
-              placeholder="Search"
-              aria-label="Search"
-            />
-          </div>
+          <SearchBarCompact placeholder="Search" />
 
           <div className="ml-auto flex items-center gap-2">
             {user ? (

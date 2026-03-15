@@ -1,8 +1,15 @@
 import ForgotPasswordForm from "@/components/ForgotPasswordForm";
 import SiteHeader from "@/components/Header";
 import React from "react";
+import { redirect } from "next/navigation";
+import { isAuthenticated } from "@/lib/auth/auth-check";
 
-const ForgotPasswordPage = () => {
+const ForgotPasswordPage = async () => {
+  // Redirect authenticated users to home page
+  if (await isAuthenticated()) {
+    redirect("/");
+  }
+
   return (
     <div className="min-h-screen">
       <SiteHeader activeBar="Social">

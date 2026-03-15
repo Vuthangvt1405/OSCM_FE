@@ -23,7 +23,7 @@ export async function GET(
     const size = url.searchParams.get("size") || "10";
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/posts/user/${userId}?page=${page}&size=${size}`,
+      `${backendBaseUrl}/api/social/posts/user/${userId}?page=${page}&size=${size}`,
       {
         method: "GET",
         headers,

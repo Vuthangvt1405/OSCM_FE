@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const upstream = await fetch(`${backendBaseUrl}/api/auth/login`, {
+  const upstream = await fetch(`${backendBaseUrl}/api/v1/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

@@ -9,27 +9,22 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
     const token = cookieStore.get(AUTH_TOKEN_COOKIE)?.value;
 
-    console.log("Received POST request to create post");
-    console.log("Token present:", !!token);
-
     if (!token) {
-      console.log("No authentication token found");
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     let body: unknown;
     try {
       body = await req.json();
-      console.log("Parsed request body:", body);
     } catch (error) {
-      console.error("Error parsing request body:", error);
+      console.error("[PostsAPI] Error parsing request body:", error);
       return NextResponse.json(
         { message: "Malformed JSON request" },
         { status: 400 },
       );
     }
 
-    const upstream = await fetch(`${backendBaseUrl}/social/posts`, {
+    const upstream = await fetch(`${backendBaseUrl}/api/social/posts`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -38,20 +33,14 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
 
-    console.log("Backend response status:", upstream.status);
-    console.log("Backend response headers:", Object.fromEntries(upstream.headers.entries()));
-    
     const contentType = upstream.headers.get("content-type") ?? "";
     let payload: unknown;
     try {
       payload = contentType.includes("application/json")
         ? await upstream.json()
         : await upstream.text();
-      console.log("Backend response payload:", payload);
     } catch {
-      const text = await upstream.text();
-      console.log("Backend response text:", text);
-      payload = "Unexpected response format: " + text;
+      payload = await upstream.text();
     }
 
     if (!upstream.ok) {
@@ -60,7 +49,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(payload, { status: 201 });
   } catch (error) {
-    console.error("API Route Error:", error);
+    console.error("[PostsAPI] Error:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },
@@ -78,7 +67,7 @@ export async function GET(req: Request) {
   const token = (await cookies()).get(AUTH_TOKEN_COOKIE)?.value;
 
   const upstream = await fetch(
-    `${backendBaseUrl}/social/posts?page=${page}&size=${size}`,
+    `${backendBaseUrl}/api/social/posts?page=${page}&size=${size}`,
     {
       method: "GET",
       headers: token ? { authorization: `Bearer ${token}` } : undefined,

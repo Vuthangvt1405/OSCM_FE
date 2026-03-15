@@ -94,7 +94,18 @@ export function useComments(postId: string | null): UseCommentsResult {
       // Optimistic update
       setComments((prev) => {
         const updateComment = (comment: Comment): Comment => {
+          // First, recursively update any replies
           const updatedReplies = comment.replies.map(updateComment);
+
+          // Only update this comment if it matches the target commentId
+          if (comment.id !== commentId) {
+            return {
+              ...comment,
+              replies: updatedReplies,
+            };
+          }
+
+          // Apply reaction changes only to the target comment
           let newReaction: "LIKE" | "DISLIKE" | null = type;
           let newLikeCount = comment.likeCount;
           let newDislikeCount = comment.dislikeCount;

@@ -39,7 +39,7 @@ export async function POST(
 
     // Proxy to backend
     const upstream = await fetch(
-      `${backendBaseUrl}/social/posts/${postId}/unlock`,
+      `${backendBaseUrl}/api/social/posts/${postId}/unlock`,
       {
         method: "POST",
         headers,

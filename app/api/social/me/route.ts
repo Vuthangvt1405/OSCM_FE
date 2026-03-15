@@ -17,7 +17,7 @@ export async function GET() {
       authorization: `Bearer ${token}`,
     };
 
-    const upstream = await fetch(`${backendBaseUrl}/social/me`, {
+    const upstream = await fetch(`${backendBaseUrl}/api/social/me`, {
       method: "GET",
       headers,
       cache: "no-store",
@@ -59,7 +59,7 @@ export async function PUT(req: Request) {
       "content-type": "application/json",
     };
 
-    const upstream = await fetch(`${backendBaseUrl}/social/me`, {
+    const upstream = await fetch(`${backendBaseUrl}/api/social/me`, {
       method: "PUT",
       headers,
       body: JSON.stringify(body),

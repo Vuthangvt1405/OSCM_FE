@@ -141,67 +141,71 @@ async function fetchPosts(
 
   if (!Array.isArray(payload)) return [];
 
-  return payload
-    .map((item): PostSearchItem | null => {
-      if (typeof item !== "object" || item === null) return null;
+  return (
+    payload
+      .map((item): PostSearchItem | null => {
+        if (typeof item !== "object" || item === null) return null;
 
-      const record = item as Record<string, unknown>;
-      const id = typeof record.id === "string" ? record.id : null;
-      const title = typeof record.title === "string" ? record.title : null;
+        const record = item as Record<string, unknown>;
+        const id = typeof record.id === "string" ? record.id : null;
+        const title = typeof record.title === "string" ? record.title : null;
 
-      if (!id || !title) return null;
+        if (!id || !title) return null;
 
-      const caption = typeof record.caption === "string" ? record.caption : "";
-      const cover = typeof record.cover === "string" ? record.cover : null;
-      const createdAt =
-        typeof record.createdAt === "string" ? record.createdAt : "";
-      const likeCount =
-        typeof record.likeCount === "number" ? record.likeCount : 0;
-      const dislikeCount =
-        typeof record.dislikeCount === "number" ? record.dislikeCount : 0;
+        const caption =
+          typeof record.caption === "string" ? record.caption : "";
+        const cover = typeof record.cover === "string" ? record.cover : null;
+        const createdAt =
+          typeof record.createdAt === "string" ? record.createdAt : "";
+        const likeCount =
+          typeof record.likeCount === "number" ? record.likeCount : 0;
+        const dislikeCount =
+          typeof record.dislikeCount === "number" ? record.dislikeCount : 0;
 
-      // Parse author
-      let author: { username: string } | null = null;
-      if (typeof record.author === "object" && record.author !== null) {
-        const authorRecord = record.author as Record<string, unknown>;
-        const username =
-          typeof authorRecord.username === "string"
-            ? authorRecord.username
-            : null;
-        if (username) author = { username };
-      }
+        // Parse author
+        let author: { username: string } | null = null;
+        if (typeof record.author === "object" && record.author !== null) {
+          const authorRecord = record.author as Record<string, unknown>;
+          const username =
+            typeof authorRecord.username === "string"
+              ? authorRecord.username
+              : null;
+          if (username) author = { username };
+        }
 
-      // Parse topic
-      let topic: { id: string; name: string } | null = null;
-      if (typeof record.topic === "object" && record.topic !== null) {
-        const topicRecord = record.topic as Record<string, unknown>;
-        const topicId =
-          typeof topicRecord.id === "string" ? topicRecord.id : null;
-        const topicName =
-          typeof topicRecord.name === "string" ? topicRecord.name : null;
-        if (topicId && topicName) topic = { id: topicId, name: topicName };
-      }
+        // Parse topic
+        let topic: { id: string; name: string } | null = null;
+        if (typeof record.topic === "object" && record.topic !== null) {
+          const topicRecord = record.topic as Record<string, unknown>;
+          const topicId =
+            typeof topicRecord.id === "string" ? topicRecord.id : null;
+          const topicName =
+            typeof topicRecord.name === "string" ? topicRecord.name : null;
+          if (topicId && topicName) topic = { id: topicId, name: topicName };
+        }
 
-      // Parse tags
-      let tags: string[] = [];
-      if (Array.isArray(record.tags)) {
-        tags = record.tags.filter((t): t is string => typeof t === "string");
-      }
+        // Parse tags
+        let tags: string[] = [];
+        if (Array.isArray(record.tags)) {
+          tags = record.tags.filter((t): t is string => typeof t === "string");
+        }
 
-      return {
-        id,
-        title,
-        caption,
-        cover,
-        author,
-        topic,
-        tags,
-        createdAt,
-        likeCount,
-        dislikeCount,
-      };
-    })
-    .filter((p): p is PostSearchItem => p !== null);
+        return {
+          id,
+          title,
+          caption,
+          cover,
+          author,
+          topic,
+          tags,
+          createdAt,
+          likeCount,
+          dislikeCount,
+        };
+      })
+      // Filter out posts without cover images (null or empty string)
+      .filter((p): p is PostSearchItem => p !== null && !!p.cover)
+  );
 }
 
 /**

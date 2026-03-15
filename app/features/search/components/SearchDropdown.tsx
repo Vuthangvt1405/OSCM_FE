@@ -148,7 +148,7 @@ function PostResultItem({
       className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors"
       onClick={onClick}
     >
-      {post.cover ? (
+      {post.cover && post.cover !== "default" ? (
         <img
           src={post.cover}
           alt=""

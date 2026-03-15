@@ -42,7 +42,7 @@ export async function POST(
     }
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/topics/${topicId}/posts`,
+      `${backendBaseUrl}/api/social/topics/${topicId}/posts`,
       {
         method: "POST",
         headers: {

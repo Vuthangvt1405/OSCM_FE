@@ -127,19 +127,15 @@ export const SearchInput = forwardRef<SearchInputHandle, SearchInputProps>(
           bg-background
           text-sm
           placeholder:text-muted-foreground
+          focus:border
           focus:outline-none
-          focus:ring-2
-          focus:ring-primary
-          focus:border-transparent
-          disabled:opacity-50
-          disabled:cursor-not-allowed
           transition-colors
           duration-200
+          outline-none
         "
         />
 
-        {/* Clear Button */}
-        {value && !isLoading && (
+        {/* Clevalue && !isLoading && (
           <button
             type="button"
             onClick={handleClear}

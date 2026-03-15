@@ -17,15 +17,15 @@ export async function POST(req: Request) {
 
     const backendFormData = new FormData();
     backendFormData.append("file", file);
-    
-    const res = await fetch(`${backendBaseUrl}/social/media/upload`, {
+
+    const res = await fetch(`${backendBaseUrl}/api/social/media/upload`, {
       method: "POST",
       headers: token ? { authorization: `Bearer ${token}` } : undefined,
       body: backendFormData,
     });
 
     const payload = await res.json().catch(() => ({}));
-    
+
     if (!res.ok) {
       console.error("Backend upload failed:", res.status, payload);
       return NextResponse.json(payload, { status: res.status });
@@ -34,6 +34,9 @@ export async function POST(req: Request) {
     return NextResponse.json(payload);
   } catch (error) {
     console.error("Upload proxy error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

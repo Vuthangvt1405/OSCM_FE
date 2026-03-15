@@ -1,8 +1,15 @@
 import SiteHeader from "@/components/Header";
 import LoginForm from "@/components/LoginForm";
 import React from "react";
+import { redirect } from "next/navigation";
+import { isAuthenticated } from "@/lib/auth/auth-check";
 
-const page = () => {
+const page = async () => {
+  // Redirect authenticated users to home page
+  if (await isAuthenticated()) {
+    redirect("/");
+  }
+
   return (
     <div className="min-h-screen">
       <SiteHeader activeBar="Social">

@@ -14,7 +14,7 @@ export async function GET() {
     );
   }
 
-  const upstream = await fetch(`${backendBaseUrl}/social/me`, {
+  const upstream = await fetch(`${backendBaseUrl}/api/social/me`, {
     method: "GET",
     headers: {
       authorization: `Bearer ${token}`,
@@ -31,7 +31,7 @@ export async function GET() {
   if (!upstream.ok) {
     const res = NextResponse.json(payload, { status: upstream.status });
 
-    if (upstream.status === 401 || upstream.status === 403) {
+    if (upstream.status === 401) {
       res.cookies.set(AUTH_TOKEN_COOKIE, "", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

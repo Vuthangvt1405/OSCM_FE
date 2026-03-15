@@ -18,7 +18,7 @@ export async function GET(
     }
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/posts/${postId}/comments`,
+      `${backendBaseUrl}/api/social/posts/${postId}/comments`,
       {
         method: "GET",
         headers,
@@ -61,7 +61,7 @@ export async function POST(
     const body = await req.json();
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/posts/${postId}/comments`,
+      `${backendBaseUrl}/api/social/posts/${postId}/comments`,
       {
         method: "POST",
         headers: {

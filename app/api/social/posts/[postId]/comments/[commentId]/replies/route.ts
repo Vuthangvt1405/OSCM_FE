@@ -19,7 +19,7 @@ export async function POST(
     const body = await req.json();
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/posts/${postId}/comments/${commentId}/replies`,
+      `${backendBaseUrl}/api/social/posts/${postId}/comments/${commentId}/replies`,
       {
         method: "POST",
         headers: {

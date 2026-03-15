@@ -9,6 +9,8 @@ export type ProfileHeaderProps = {
   profile: UserProfile;
   isOwnProfile?: boolean;
   onEditProfile?: () => void;
+  onFollow?: () => void;
+  isFollowing?: boolean;
 };
 
 function formatJoinDate(dateString: string): string {
@@ -38,6 +40,8 @@ export function ProfileHeader({
   profile,
   isOwnProfile = true,
   onEditProfile,
+  onFollow,
+  isFollowing = false,
 }: ProfileHeaderProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -112,11 +116,12 @@ export function ProfileHeader({
           ) : (
             <>
               <Button
-                className="gap-2 bg-orange-500 text-white hover:bg-orange-600"
+                className={`gap-2 ${isFollowing ? "bg-transparent border-2 border-slate-300 text-slate-600 hover:bg-slate-100" : "bg-orange-500 text-white hover:bg-orange-600"}`}
                 size="sm"
+                onClick={onFollow}
               >
                 <UserPlus className="h-4 w-4" />
-                Follow
+                {isFollowing ? "Following" : "Follow"}
               </Button>
               <Button
                 variant="outline"

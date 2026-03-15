@@ -14,7 +14,7 @@ export async function POST() {
     }
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/me/telegram/verification/start`,
+      `${backendBaseUrl}/api/social/me/telegram/verification/start`,
       {
         method: "POST",
         headers: {

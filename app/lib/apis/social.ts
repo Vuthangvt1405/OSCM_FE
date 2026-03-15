@@ -1,4 +1,5 @@
 import type { PostDetailResponse, PostDetailAuthor } from "@/lib/social/types";
+import { getJson, postJson } from "./http";
 
 type ErrorShape = {
   message?: string;
@@ -800,20 +801,9 @@ function parseCurrentUserResponse(value: unknown): CurrentUserResponse | null {
 }
 
 export async function getCurrentUser(): Promise<CurrentUserResponse> {
-  const res = await fetch("/api/social/me", {
-    method: "GET",
+  const payload = await getJson<unknown>("/api/social/me", {
     credentials: "include",
   });
-
-  const contentType = res.headers.get("content-type") ?? "";
-  const payload: unknown = contentType.includes("application/json")
-    ? await res.json().catch(() => null)
-    : await res.text().catch(() => "");
-
-  if (!res.ok) {
-    const fallback = `Request failed (${res.status} ${res.statusText})`;
-    throw new Error(extractMessage(payload, fallback));
-  }
 
   const parsed = parseCurrentUserResponse(payload);
   if (!parsed) {
@@ -821,6 +811,40 @@ export async function getCurrentUser(): Promise<CurrentUserResponse> {
   }
 
   return parsed;
+}
+
+/**
+ * Fetches the current user, returning null if not authenticated (401)
+ * or if the social profile doesn't exist (403).
+ * Use this for UI components that need to handle unauthenticated states gracefully.
+ */
+export async function getCurrentUserOrNull(): Promise<CurrentUserResponse | null> {
+  try {
+    const payload = await getJson<unknown>("/api/social/me", {
+      credentials: "include",
+    });
+
+    const parsed = parseCurrentUserResponse(payload);
+    if (!parsed) {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    // Check if it's an auth error (401) or no profile (403)
+    if (error instanceof Error) {
+      const statusMatch = error.message.match(/\((\d{3})(?:\s|$)/);
+      if (statusMatch) {
+        const status = parseInt(statusMatch[1], 10);
+        // 401: Not authenticated, 403: No social profile
+        if (status === 401 || status === 403) {
+          return null;
+        }
+      }
+    }
+    // Re-throw for other errors
+    throw error;
+  }
 }
 
 export async function updateCurrentUser(
@@ -1146,4 +1170,70 @@ export async function startTelegramVerification(): Promise<TelegramVerificationS
   }
 
   return payload as TelegramVerificationStartResponse;
+}
+
+// ============ Follow/Unfollow API ============
+
+export type FollowUserResponse = {
+  success: boolean;
+  following: boolean;
+};
+
+export async function followUser(userId: string): Promise<FollowUserResponse> {
+  const res = await fetch(`/api/social/follow/${userId}`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const fallback = `Request failed (${res.status} ${res.statusText})`;
+    throw new Error(extractMessage(payload, fallback));
+  }
+
+  return payload as FollowUserResponse;
+}
+
+export async function unfollowUser(
+  userId: string,
+): Promise<FollowUserResponse> {
+  const res = await fetch(`/api/social/follow/${userId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const fallback = `Request failed (${res.status} ${res.statusText})`;
+    throw new Error(extractMessage(payload, fallback));
+  }
+
+  return payload as FollowUserResponse;
+}
+
+export async function checkFollowStatus(userId: string): Promise<boolean> {
+  const res = await fetch(`/api/social/follow/${userId}/status`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const fallback = `Request failed (${res.status} ${res.statusText})`;
+    throw new Error(extractMessage(payload, fallback));
+  }
+
+  return (payload as { following: boolean }).following;
 }

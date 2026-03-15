@@ -18,11 +18,14 @@ export async function GET(
       headers.authorization = `Bearer ${token}`;
     }
 
-    const upstream = await fetch(`${backendBaseUrl}/social/user/${userId}`, {
-      method: "GET",
-      headers,
-      cache: "no-store",
-    });
+    const upstream = await fetch(
+      `${backendBaseUrl}/api/social/user/${userId}`,
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      },
+    );
 
     const contentType = upstream.headers.get("content-type") ?? "";
     const payload = contentType.includes("application/json")

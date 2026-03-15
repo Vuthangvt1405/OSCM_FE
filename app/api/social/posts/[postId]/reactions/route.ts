@@ -2,7 +2,6 @@ import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
 import { getBackendBaseUrl } from "@/lib/server/backend";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { json } from "zod";
 
 export async function POST(
   req: Request,
@@ -38,7 +37,7 @@ export async function POST(
 
   const backendBaseUrl = getBackendBaseUrl();
   const res = await fetch(
-    `${backendBaseUrl}/social/posts/${postId}/reactions`,
+    `${backendBaseUrl}/api/social/posts/${postId}/reactions`,
     {
       method: "POST",
       headers: {

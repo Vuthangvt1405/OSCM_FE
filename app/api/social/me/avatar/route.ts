@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       authorization: `Bearer ${token}`,
     };
 
-    const upstream = await fetch(`${backendBaseUrl}/social/me/avatar`, {
+    const upstream = await fetch(`${backendBaseUrl}/api/social/me/avatar`, {
       method: "POST",
       headers,
       body: backendFormData,

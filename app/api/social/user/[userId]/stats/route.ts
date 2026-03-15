@@ -19,7 +19,7 @@ export async function GET(
     }
 
     const upstream = await fetch(
-      `${backendBaseUrl}/social/user/${userId}/stats`,
+      `${backendBaseUrl}/api/social/user/${userId}/stats`,
       {
         method: "GET",
         headers,
