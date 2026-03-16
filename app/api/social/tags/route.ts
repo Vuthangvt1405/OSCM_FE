@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
   let targetUrl: string;
   if (query && query.trim()) {
     // Search tags
-    targetUrl = `${backendUrl}/social/tags/search?q=${encodeURIComponent(query.trim())}&page=${page}&size=${size}`;
+    targetUrl = `${backendUrl}/api/social/tags/search?q=${encodeURIComponent(query.trim())}&page=${page}&size=${size}`;
   } else {
     // List all tags
-    targetUrl = `${backendUrl}/social/tags?page=${page}&size=${size}`;
+    targetUrl = `${backendUrl}/api/social/tags?page=${page}&size=${size}`;
   }
 
   const res = await fetch(targetUrl, {

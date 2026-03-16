@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const targetUrl = `${backendUrl}/social/users/search?q=${encodeURIComponent(query.trim())}&page=${page}&size=${size}`;
+  const targetUrl = `${backendUrl}/api/social/users/search?q=${encodeURIComponent(query.trim())}&page=${page}&size=${size}`;
 
   try {
     const res = await fetch(targetUrl, {
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     });
 
     const data = await res.json();

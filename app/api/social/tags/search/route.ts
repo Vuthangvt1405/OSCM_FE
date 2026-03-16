@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const targetUrl = `${backendUrl}/social/tags/search?q=${encodeURIComponent(query.trim())}&page=${page}&size=${size}`;
+  const targetUrl = `${backendUrl}/api/social/tags/search?q=${encodeURIComponent(query.trim())}&page=${page}&size=${size}`;
 
   try {
     const res = await fetch(targetUrl, {
