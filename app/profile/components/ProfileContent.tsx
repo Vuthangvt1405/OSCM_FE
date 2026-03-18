@@ -167,6 +167,7 @@ export function ProfileContent() {
   const userPosts: UserPost[] = posts.map((post) => ({
     id: post.id,
     authorName: post.author?.username ?? "Unknown",
+    authorAvatarSrc: post.author?.profilePictureUrl ?? null,
     title: post.title,
     caption: post.caption ?? undefined,
     score: (post.likeCount ?? 0) - (post.dislikeCount ?? 0),

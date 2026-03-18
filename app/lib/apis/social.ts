@@ -19,7 +19,9 @@ function extractMessage(payload: unknown, fallback: string): string {
 }
 
 export type BackendAuthor = {
+  authorId?: string | null;
   username?: string | null;
+  profilePictureUrl?: string | null;
 };
 
 export type BackendPostFeedItem = {
@@ -28,6 +30,7 @@ export type BackendPostFeedItem = {
   caption?: string | null;
   cover?: string | null;
   author?: BackendAuthor | null;
+  authorAvatarSrc?: string | null;
   myReaction?: string | null;
   createdAt?: string | null;
   /** Number of likes on this post */
@@ -44,8 +47,13 @@ export type SocialPostsPage = {
 
 function parseBackendAuthor(value: unknown): BackendAuthor | null {
   if (!isRecord(value)) return null;
+  const authorId = typeof value.authorId === "string" ? value.authorId : null;
   const username = typeof value.username === "string" ? value.username : null;
-  return { username };
+  const profilePictureUrl =
+    typeof value.profilePictureUrl === "string"
+      ? value.profilePictureUrl
+      : null;
+  return { authorId, username, profilePictureUrl };
 }
 
 function parseBackendPostFeedItem(value: unknown): BackendPostFeedItem | null {
@@ -77,6 +85,7 @@ function parseBackendPostFeedItem(value: unknown): BackendPostFeedItem | null {
     cover,
     createdAt,
     author,
+    authorAvatarSrc: author?.profilePictureUrl ?? null,
     myReaction,
     likeCount,
     dislikeCount,
@@ -443,8 +452,12 @@ function parsePostDetailResponse(value: unknown): PostDetailResponse | null {
   const visibility =
     typeof value.visibility === "string" ? value.visibility : "PUBLIC";
 
-  // Parse author - backend returns { authorId, username }
-  let author: PostDetailAuthor = { authorId: "", username: "unknown" };
+  // Parse author - backend returns { authorId, username, profilePictureUrl? }
+  let author: PostDetailAuthor = {
+    authorId: "",
+    username: "unknown",
+    avatarUrl: null,
+  };
   if (isRecord(value.author)) {
     author = {
       authorId:
@@ -453,6 +466,10 @@ function parsePostDetailResponse(value: unknown): PostDetailResponse | null {
         typeof value.author.username === "string"
           ? value.author.username
           : "unknown",
+      avatarUrl:
+        typeof value.author.profilePictureUrl === "string"
+          ? value.author.profilePictureUrl
+          : null,
     };
   }
 
@@ -1179,6 +1196,13 @@ export type FollowUserResponse = {
   following: boolean;
 };
 
+export type FollowStatusResponse = {
+  isFollowing: boolean;
+  isFollowedBy: boolean;
+  followersCount: number;
+  followingCount: number;
+};
+
 export async function followUser(userId: string): Promise<FollowUserResponse> {
   const res = await fetch(`/api/social/follow/${userId}`, {
     method: "POST",
@@ -1235,5 +1259,44 @@ export async function checkFollowStatus(userId: string): Promise<boolean> {
     throw new Error(extractMessage(payload, fallback));
   }
 
-  return (payload as { following: boolean }).following;
+  // Backend returns { isFollowing, isFollowedBy, followersCount, followingCount }
+  // Extract isFollowing from the response
+  const status = payload as FollowStatusResponse;
+  return status.isFollowing;
+}
+
+export type RegisterSocialProfileRequest = {
+  email: string;
+  username: string;
+  displayName?: string;
+};
+
+export async function registerSocialProfile(
+  input: RegisterSocialProfileRequest,
+): Promise<CurrentUserResponse> {
+  const res = await fetch("/api/social/users", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const fallback = `Request failed (${res.status} ${res.statusText})`;
+    throw new Error(extractMessage(payload, fallback));
+  }
+
+  const parsed = parseCurrentUserResponse(payload);
+  if (!parsed) {
+    throw new Error("Invalid response from server");
+  }
+
+  return parsed;
 }

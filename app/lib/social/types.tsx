@@ -6,6 +6,7 @@ export type TopicInfo = {
 export type FeedPost = {
   id: string;
   authorName: string;
+  authorAvatarSrc?: string | null;
   authorRole?: string;
   title: string;
   caption?: string;
@@ -24,6 +25,7 @@ export type FeedPost = {
 export type PostDetailAuthor = {
   authorId: string;
   username: string;
+  avatarUrl?: string | null;
 };
 
 export type PostDetailResponse = {

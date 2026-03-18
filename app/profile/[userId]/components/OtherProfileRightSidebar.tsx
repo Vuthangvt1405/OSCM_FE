@@ -1,9 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import type { NewFollower, Topic } from "@/lib/social/types";
 import { Hash, ChevronRight, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { followUser, unfollowUser, checkFollowStatus } from "@/lib/apis/social";
+import { useAuth } from "@/hooks/useAuth";
 
 export type OtherProfileRightSidebarProps = {
   suggestedUsers?: NewFollower[];
@@ -23,8 +26,79 @@ export function OtherProfileRightSidebar({
   suggestedUsers = [],
   similarInterests = [],
 }: OtherProfileRightSidebarProps) {
+  const { isAuthenticated } = useAuth();
   const hasSuggestions = suggestedUsers.length > 0;
   const hasInterests = similarInterests.length > 0;
+
+  // Track follow status for each suggested user
+  const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
+  const [loadingUsers, setLoadingUsers] = useState<Set<string>>(new Set());
+
+  // Check follow status for all suggested users on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isAuthenticated || suggestedUsers.length === 0) {
+      setFollowingUsers(new Set());
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const checkAllFollowStatus = async () => {
+      const statuses = await Promise.all(
+        suggestedUsers.map(async (user) => {
+          try {
+            return (await checkFollowStatus(user.id)) ? user.id : null;
+          } catch {
+            // Ignore errors, default to not following
+            return null;
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setFollowingUsers(
+          new Set(statuses.filter((id): id is string => Boolean(id))),
+        );
+      }
+    };
+
+    void checkAllFollowStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, suggestedUsers]);
+
+  const handleFollow = async (userId: string) => {
+    if (loadingUsers.has(userId)) return;
+
+    try {
+      setLoadingUsers((prev) => new Set(prev).add(userId));
+      const isCurrentlyFollowing = followingUsers.has(userId);
+
+      if (isCurrentlyFollowing) {
+        await unfollowUser(userId);
+        setFollowingUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      } else {
+        await followUser(userId);
+        setFollowingUsers((prev) => new Set(prev).add(userId));
+      }
+    } catch (err) {
+      console.warn("Failed to toggle follow:", err);
+    } finally {
+      setLoadingUsers((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -66,8 +140,16 @@ export function OtherProfileRightSidebar({
                     </p>
                   )}
                 </div>
-                <button className="shrink-0 rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-800">
-                  Follow
+                <button
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    followingUsers.has(user.id)
+                      ? "border-2 border-slate-300 bg-transparent text-slate-600 hover:bg-slate-100"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  } ${loadingUsers.has(user.id) ? "opacity-50" : ""}`}
+                  onClick={() => handleFollow(user.id)}
+                  disabled={loadingUsers.has(user.id)}
+                >
+                  {followingUsers.has(user.id) ? "Following" : "Follow"}
                 </button>
               </div>
             ))}

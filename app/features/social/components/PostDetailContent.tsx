@@ -4,6 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Bookmark,
   Lock,
   MessageCircle,
@@ -12,7 +20,8 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { PostDetailResponse } from "@/lib/social/types";
 import { LexicalContentViewer } from "./LexicalContentViewer";
 import { useSidebarAvailability } from "@/features/sidebar";
@@ -21,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { useReactionToggle } from "@/features/social/hooks/useReactionToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { CommentSection } from "./CommentSection";
+import { checkFollowStatus, followUser, unfollowUser } from "@/lib/apis/social";
 
 interface PostDetailContentProps {
   post: PostDetailResponse;
@@ -128,13 +138,53 @@ function ReactionButtons({
  */
 export function PostDetailContent({ post }: PostDetailContentProps) {
   // Get auth state
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, session, requireAuth } = useAuth();
 
   // State for password unlock modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   // Store unlocked content (decrypted)
   const [unlockedContent, setUnlockedContent] =
     useState<PostDetailResponse | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isCheckingFollowStatus, setIsCheckingFollowStatus] = useState(false);
+  const [isFollowPending, setIsFollowPending] = useState(false);
+  const [isUnfollowModalOpen, setIsUnfollowModalOpen] = useState(false);
+
+  const authorId = post.author.authorId;
+  const isOwnPostAuthor = Boolean(
+    session?.userId && session.userId === authorId,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const setIfActive = (fn: () => void) => {
+      if (!cancelled) fn();
+    };
+
+    const loadFollowStatus = async () => {
+      if (!isAuthenticated || !authorId || isOwnPostAuthor) {
+        setIsFollowing(false);
+        return;
+      }
+
+      setIsCheckingFollowStatus(true);
+      try {
+        const following = await checkFollowStatus(authorId);
+        setIfActive(() => setIsFollowing(following));
+      } catch {
+        setIfActive(() => setIsFollowing(false));
+      } finally {
+        setIfActive(() => setIsCheckingFollowStatus(false));
+      }
+    };
+
+    loadFollowStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authorId, isAuthenticated, isOwnPostAuthor]);
 
   // Determine if post is currently locked (and not yet unlocked)
   const isLocked = post.locked && !unlockedContent;
@@ -153,13 +203,77 @@ export function PostDetailContent({ post }: PostDetailContentProps) {
     setUnlockedContent(unlockedPost);
   };
 
+  const handleFollowClick = async () => {
+    if (!requireAuth(window.location.pathname)) {
+      return;
+    }
+
+    if (
+      !authorId ||
+      isOwnPostAuthor ||
+      isFollowPending ||
+      isCheckingFollowStatus
+    ) {
+      return;
+    }
+
+    if (isFollowing) {
+      setIsUnfollowModalOpen(true);
+      return;
+    }
+
+    setIsFollowPending(true);
+    try {
+      await followUser(authorId);
+      setIsFollowing(true);
+      toast.success(`You are now following @${post.author.username}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to follow user");
+    } finally {
+      setIsFollowPending(false);
+    }
+  };
+
+  const handleConfirmUnfollow = async () => {
+    if (!authorId || isFollowPending) {
+      return;
+    }
+
+    setIsFollowPending(true);
+    try {
+      await unfollowUser(authorId);
+      setIsFollowing(false);
+      setIsUnfollowModalOpen(false);
+      toast.success(`Unfollowed @${post.author.username}`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to unfollow user",
+      );
+    } finally {
+      setIsFollowPending(false);
+    }
+  };
+
+  const followButtonDisabled =
+    isFollowPending || isCheckingFollowStatus || !authorId;
+
   return (
     <article className="max-w-4xl mx-auto">
       {/* Author Header */}
       <header className="flex items-center gap-4 mb-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-semibold text-slate-700">
-          {getInitials(post.author.username)}
-        </div>
+        {post.author.avatarUrl ? (
+          <Image
+            src={post.author.avatarUrl}
+            alt={`${post.author.username} avatar`}
+            width={48}
+            height={48}
+            className="h-12 w-12 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-semibold text-slate-700">
+            {getInitials(post.author.username)}
+          </div>
+        )}
 
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -191,12 +305,35 @@ export function PostDetailContent({ post }: PostDetailContentProps) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Follow
-        </button>
+        {isOwnPostAuthor ? (
+          <Link
+            href={`/write?postId=${post.id}`}
+            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Manage post
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={handleFollowClick}
+            disabled={followButtonDisabled}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              isFollowing
+                ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                : "bg-slate-900 text-white hover:bg-slate-800"
+            } ${followButtonDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+          >
+            {isFollowPending
+              ? isFollowing
+                ? "Unfollowing..."
+                : "Following..."
+              : isCheckingFollowStatus
+                ? "Loading..."
+                : isFollowing
+                  ? "Following"
+                  : "Follow"}
+          </button>
+        )}
       </header>
 
       {/* Title */}
@@ -270,6 +407,40 @@ export function PostDetailContent({ post }: PostDetailContentProps) {
         onClose={() => setIsModalOpen(false)}
         onUnlock={handleUnlock}
       />
+
+      <Dialog
+        open={isUnfollowModalOpen}
+        onOpenChange={(open) => {
+          if (!isFollowPending) {
+            setIsUnfollowModalOpen(open);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unfollow @{post.author.username}?</DialogTitle>
+            <DialogDescription>
+              Their posts may appear less often in your feed after unfollowing.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsUnfollowModalOpen(false)}
+              disabled={isFollowPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmUnfollow}
+              disabled={isFollowPending}
+            >
+              {isFollowPending ? "Unfollowing..." : "Unfollow"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between py-6 border-t border-b border-slate-200">

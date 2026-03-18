@@ -81,8 +81,12 @@ function parsePostDetailResponse(value: unknown): PostDetailResponse | null {
   const visibility =
     typeof value.visibility === "string" ? value.visibility : "PUBLIC";
 
-  // Parse author - backend returns { authorId, username }
-  let author: PostDetailAuthor = { authorId: "", username: "unknown" };
+  // Parse author - backend returns { authorId, username, profilePictureUrl? }
+  let author: PostDetailAuthor = {
+    authorId: "",
+    username: "unknown",
+    avatarUrl: null,
+  };
   if (isRecord(value.author)) {
     author = {
       authorId:
@@ -91,6 +95,10 @@ function parsePostDetailResponse(value: unknown): PostDetailResponse | null {
         typeof value.author.username === "string"
           ? value.author.username
           : "unknown",
+      avatarUrl:
+        typeof value.author.profilePictureUrl === "string"
+          ? value.author.profilePictureUrl
+          : null,
     };
   }
 

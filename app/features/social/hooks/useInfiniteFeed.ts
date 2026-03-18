@@ -51,6 +51,7 @@ function toFeedPost(item: BackendPostFeedItem): FeedPost {
   return {
     id: String(item.id),
     authorName,
+    authorAvatarSrc: item.authorAvatarSrc ?? null,
     title: item.title,
     caption: item.caption ?? undefined,
     score: 0,
