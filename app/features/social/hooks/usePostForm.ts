@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -9,8 +9,9 @@ import {
   PostFormData,
   defaultPostFormValues,
 } from "../schemas/post-form.schema";
-import { createPost, createTopicPost } from "@/lib/apis/social";
+import { createPost, createTopicPost, updatePost } from "@/lib/apis/social";
 import { uploadMedia } from "@/lib/apis/media";
+import type { PostDetailResponse } from "@/lib/social/types";
 
 // Allowed image types and max size (5MB)
 const ALLOWED_IMAGE_TYPES = [
@@ -42,11 +43,19 @@ interface UsePostFormReturn {
   resetForm: () => void;
 }
 
+interface UsePostFormOptions {
+  postId?: string;
+  initialPost?: PostDetailResponse | null;
+}
+
 /**
  * Custom hook for managing post creation form
  * Combines React Hook Form with Zod validation and API submission
  */
-export function usePostForm(): UsePostFormReturn {
+export function usePostForm({
+  postId,
+  initialPost,
+}: UsePostFormOptions = {}): UsePostFormReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -58,13 +67,47 @@ export function usePostForm(): UsePostFormReturn {
     mode: "onChange", // Validate on change for better UX
   });
 
-  // Derive preview URL from coverFile (auto-managed)
+  const isEditIntent = Boolean(postId);
+  const isEditMode = Boolean(postId && initialPost);
+
+  useEffect(() => {
+    if (!initialPost) {
+      form.reset(defaultPostFormValues);
+      setCoverFile(null);
+      setCoverServerUrl(null);
+      return;
+    }
+
+    form.reset({
+      ...defaultPostFormValues,
+      title: initialPost.title ?? "",
+      content: initialPost.content ?? "",
+      caption: initialPost.caption ?? "",
+      visibility: initialPost.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+      tags: initialPost.tags ?? [],
+      coverServerUrl:
+        initialPost.cover && initialPost.cover !== "default"
+          ? initialPost.cover
+          : undefined,
+      isPasswordProtected: initialPost.locked,
+      password: undefined,
+    });
+
+    setCoverFile(null);
+    setCoverServerUrl(
+      initialPost.cover && initialPost.cover !== "default"
+        ? initialPost.cover
+        : null,
+    );
+  }, [initialPost, form]);
+
+  // Derive preview URL from either a newly selected file or the existing server URL
   const coverPreviewUrl = useMemo(() => {
     if (coverFile) {
       return URL.createObjectURL(coverFile);
     }
-    return null;
-  }, [coverFile]);
+    return coverServerUrl;
+  }, [coverFile, coverServerUrl]);
 
   // Check form validity (excluding cover upload state)
   const isValid = form.formState.isValid && !isSubmitting && !isUploadingCover;
@@ -114,6 +157,13 @@ export function usePostForm(): UsePostFormReturn {
     form.setValue("coverServerUrl", undefined);
   }, [form]);
 
+  // Reset form
+  const resetForm = useCallback(() => {
+    form.reset(defaultPostFormValues);
+    setCoverFile(null);
+    setCoverServerUrl(null);
+  }, [form]);
+
   // Submit handler
   const submit = useCallback(async () => {
     // Trigger validation
@@ -138,7 +188,12 @@ export function usePostForm(): UsePostFormReturn {
     setIsSubmitting(true);
 
     try {
-      const payload = {
+      if (isEditIntent && !initialPost) {
+        toast.error("Unable to load the post for editing.");
+        return;
+      }
+
+      const createPayload = {
         title: formData.title.trim(),
         caption: formData.caption.trim(),
         content: formData.content?.trim() || "",
@@ -148,30 +203,52 @@ export function usePostForm(): UsePostFormReturn {
         password: formData.isPasswordProtected ? formData.password : undefined,
       };
 
-      if (formData.postType === "community" && formData.selectedCommunityId) {
-        await createTopicPost(formData.selectedCommunityId, payload);
+      if (isEditMode && postId && initialPost) {
+        const updatePayload = {
+          title: formData.title.trim(),
+          caption: formData.caption.trim(),
+          visibility: formData.visibility,
+          tags: formData.tags,
+          cover: coverServerUrl || "default",
+          ...(initialPost.locked
+            ? {}
+            : { content: formData.content?.trim() || "" }),
+        };
+
+        await updatePost(postId, updatePayload);
+        toast.success("Post updated successfully!");
+      } else if (
+        formData.postType === "community" &&
+        formData.selectedCommunityId
+      ) {
+        await createTopicPost(formData.selectedCommunityId, createPayload);
+        toast.success("Post created successfully!");
       } else {
-        await createPost(payload);
+        await createPost(createPayload);
+        toast.success("Post created successfully!");
       }
 
-      toast.success("Post created successfully!");
-      resetForm();
+      if (!isEditMode) {
+        resetForm();
+      }
     } catch (error) {
-      console.error("Failed to create post:", error);
+      console.error("Failed to submit post:", error);
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to create post";
+        error instanceof Error ? error.message : "Failed to submit post";
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, isUploadingCover, coverServerUrl]);
-
-  // Reset form
-  const resetForm = useCallback(() => {
-    form.reset(defaultPostFormValues);
-    setCoverFile(null);
-    setCoverServerUrl(null);
-  }, [form]);
+  }, [
+    form,
+    isUploadingCover,
+    coverServerUrl,
+    initialPost,
+    isEditIntent,
+    isEditMode,
+    postId,
+    resetForm,
+  ]);
 
   return {
     form,

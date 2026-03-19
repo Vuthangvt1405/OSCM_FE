@@ -146,6 +146,15 @@ export type CreatePostRequest = {
   password?: string;
 };
 
+export type UpdatePostRequest = {
+  title?: string;
+  content?: string;
+  cover?: string;
+  caption?: string;
+  visibility?: string;
+  tags?: string[];
+};
+
 export async function createPost(input: CreatePostRequest): Promise<void> {
   const res = await fetch("/api/social/posts", {
     method: "POST",
@@ -182,6 +191,35 @@ export async function createPost(input: CreatePostRequest): Promise<void> {
 
     throw new Error(errorMessage);
   }
+}
+
+export async function updatePost(
+  postId: string,
+  input: UpdatePostRequest,
+): Promise<PostDetailResponse> {
+  const res = await fetch(`/api/social/posts/${postId}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "include",
+  });
+
+  const contentType = res.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => "");
+
+  if (!res.ok) {
+    const fallback = `Request failed (${res.status} ${res.statusText})`;
+    throw new Error(extractMessage(payload, fallback));
+  }
+
+  const parsed = parsePostDetailResponse(payload);
+  if (!parsed) {
+    throw new Error("Invalid post response format");
+  }
+
+  return parsed;
 }
 
 export async function createTopicPost(
@@ -535,6 +573,7 @@ export async function fetchPostDetail(
   const res = await fetch(`/api/social/posts/${postId}`, {
     method: "GET",
     credentials: "include",
+    cache: "no-store",
   });
 
   const contentType = res.headers.get("content-type") ?? "";

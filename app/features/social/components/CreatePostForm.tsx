@@ -12,8 +12,11 @@ interface CreatePostFormProps {
 export function CreatePostForm({ form }: CreatePostFormProps) {
   const {
     setValue,
+    watch,
     formState: { errors },
   } = form;
+
+  const content = watch("content") || "";
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -42,6 +45,7 @@ export function CreatePostForm({ form }: CreatePostFormProps) {
         <LexkitEditor
           placeholder="Body text (optional)"
           className="flex-1 min-h-0 relative flex flex-col rounded-lg border  pb-3 border-slate-200 bg-white"
+          initialMarkdown={content}
           onChange={(value) =>
             setValue("content", value, { shouldValidate: true })
           }

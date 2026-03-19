@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -137,6 +138,7 @@ function ReactionButtons({
  * Main Post Detail Content component
  */
 export function PostDetailContent({ post }: PostDetailContentProps) {
+  const router = useRouter();
   // Get auth state
   const { isAuthenticated, session, requireAuth } = useAuth();
 
@@ -257,6 +259,10 @@ export function PostDetailContent({ post }: PostDetailContentProps) {
   const followButtonDisabled =
     isFollowPending || isCheckingFollowStatus || !authorId;
 
+  const handleManagePostClick = () => {
+    router.refresh();
+  };
+
   return (
     <article className="max-w-4xl mx-auto">
       {/* Author Header */}
@@ -308,6 +314,7 @@ export function PostDetailContent({ post }: PostDetailContentProps) {
         {isOwnPostAuthor ? (
           <Link
             href={`/write?postId=${post.id}`}
+            onClick={handleManagePostClick}
             className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
             Manage post

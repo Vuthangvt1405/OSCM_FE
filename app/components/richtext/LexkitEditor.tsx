@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -36,7 +36,11 @@ import {
 } from "@lexical/list";
 import { LinkNode, AutoLinkNode } from "@lexical/link";
 import { CodeNode } from "@lexical/code";
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import {
+  $convertFromMarkdownString,
+  $convertToMarkdownString,
+  TRANSFORMERS,
+} from "@lexical/markdown";
 import { $setBlocksType } from "@lexical/selection";
 import { ImageNode } from "./nodes/ImageNode";
 import ImagesPlugin, { INSERT_IMAGE_COMMAND } from "./plugins/ImagesPlugin";
@@ -134,6 +138,7 @@ export type LexkitEditorProps = {
   className?: string;
   onChange?: (markdown: string) => void;
   maxLength?: number;
+  initialMarkdown?: string;
 };
 
 // Block type for dropdown
@@ -733,10 +738,35 @@ function ImageUploadModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SyncMarkdownPlugin({ markdown }: { markdown?: string }) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    const nextMarkdown = markdown ?? "";
+
+    editor.update(() => {
+      const currentMarkdown = $convertToMarkdownString(TRANSFORMERS);
+      if (currentMarkdown === nextMarkdown) {
+        return;
+      }
+
+      const root = $getRoot();
+      root.clear();
+
+      if (nextMarkdown.trim().length > 0) {
+        $convertFromMarkdownString(nextMarkdown, TRANSFORMERS);
+      }
+    });
+  }, [editor, markdown]);
+
+  return null;
+}
+
 export function LexkitEditor({
   className,
   onChange,
   maxLength,
+  initialMarkdown,
 }: LexkitEditorProps) {
   const handleChange = useCallback(
     (editorState: EditorState) => {
@@ -749,6 +779,18 @@ export function LexkitEditor({
   );
   const [showImageModal, setShowImageModal] = useState(false);
 
+  const initialConfig = useMemo(
+    () => ({
+      ...editorConfig,
+      editorState: () => {
+        if (initialMarkdown && initialMarkdown.trim().length > 0) {
+          $convertFromMarkdownString(initialMarkdown, TRANSFORMERS);
+        }
+      },
+    }),
+    [initialMarkdown],
+  );
+
   return (
     <div
       className={
@@ -756,7 +798,7 @@ export function LexkitEditor({
         "relative h-full flex flex-col rounded-lg border border-slate-200 bg-white"
       }
     >
-      <LexicalComposer initialConfig={editorConfig}>
+      <LexicalComposer initialConfig={initialConfig}>
         <ToolbarPlugin
           onInsertImage={() => setShowImageModal(true)}
           maxLength={maxLength}
@@ -775,6 +817,7 @@ export function LexkitEditor({
         <CheckListPlugin />
         <TabIndentationPlugin />
         <ImagesPlugin />
+        <SyncMarkdownPlugin markdown={initialMarkdown} />
         {showImageModal && (
           <ImageUploadModal onClose={() => setShowImageModal(false)} />
         )}

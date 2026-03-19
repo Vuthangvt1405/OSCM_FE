@@ -20,7 +20,7 @@ import { useReactionToggle } from "@/features/social/hooks/useReactionToggle";
 type FeedCardPost = FeedPost & {
   viewCount?: number;
   commentCount?: number;
-  authorAvatarSrc?: string;
+  authorAvatarSrc?: string | null;
 };
 
 export type FeedCardProps = {

@@ -47,3 +47,60 @@ export async function GET(
     );
   }
 }
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ postId: string }> },
+) {
+  try {
+    const { postId } = await params;
+    const backendBaseUrl = getBackendBaseUrl();
+    const cookieStore = await cookies();
+    const token = cookieStore.get(AUTH_TOKEN_COOKIE)?.value;
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch (error) {
+      console.error("[PostDetailAPI] Error parsing request body:", error);
+      return NextResponse.json(
+        { message: "Malformed JSON request" },
+        { status: 400 },
+      );
+    }
+
+    const upstream = await fetch(
+      `${backendBaseUrl}/api/social/posts/${postId}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      },
+    );
+
+    const contentType = upstream.headers.get("content-type") ?? "";
+    const payload = contentType.includes("application/json")
+      ? await upstream.json()
+      : await upstream.text();
+
+    if (!upstream.ok) {
+      return NextResponse.json(payload, { status: upstream.status });
+    }
+
+    return NextResponse.json(payload);
+  } catch (error) {
+    console.error("[PostDetailAPI] PUT route error:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
