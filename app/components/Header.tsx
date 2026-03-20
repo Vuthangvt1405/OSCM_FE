@@ -165,6 +165,7 @@ export async function SiteHeader({ children }: SiteHeaderProps) {
                     <div className="my-1.5 h-px bg-slate-100" />
                     <Link
                       href="/logout"
+                      prefetch={false}
                       className="block rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
                       role="menuitem"
                     >

@@ -1,10 +1,12 @@
 import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
+import { shouldUseSecureCookies } from "@/lib/auth/cookie";
 import { getBackendBaseUrl } from "@/lib/server/backend";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   const backendBaseUrl = getBackendBaseUrl();
+  const secureCookie = shouldUseSecureCookies(req);
   const token = (await cookies()).get(AUTH_TOKEN_COOKIE)?.value;
 
   if (!token) {
@@ -31,10 +33,12 @@ export async function GET() {
   if (!upstream.ok) {
     const res = NextResponse.json(payload, { status: upstream.status });
 
-    if (upstream.status === 401 || upstream.status === 403) {
+    // Only clear cookie for invalid/expired token (401).
+    // Keep cookie on 403 because backend uses 403 for "authenticated but no social profile".
+    if (upstream.status === 401) {
       res.cookies.set(AUTH_TOKEN_COOKIE, "", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: secureCookie,
         sameSite: "lax",
         path: "/",
         maxAge: 0,

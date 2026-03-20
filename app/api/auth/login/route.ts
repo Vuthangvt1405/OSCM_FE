@@ -1,4 +1,5 @@
 import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
+import { shouldUseSecureCookies } from "@/lib/auth/cookie";
 import { getBackendBaseUrl } from "@/lib/server/backend";
 import { NextResponse } from "next/server";
 
@@ -13,6 +14,7 @@ type LoginResponse = {
 
 export async function POST(req: Request) {
   const backendBaseUrl = getBackendBaseUrl();
+  const secureCookie = shouldUseSecureCookies(req);
 
   let body: LoginRequest;
   try {
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
   res.cookies.set(AUTH_TOKEN_COOKIE, data.token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookie,
     path: "/",
     maxAge: 60 * 60 * 24,
   });

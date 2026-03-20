@@ -8,23 +8,12 @@ import { useCommunitySearch } from "../hooks/useCommunitySearch";
 import { useTagSearch } from "../hooks/useTagSearch";
 import { CreatePostForm } from "./CreatePostForm";
 import { PostOptionsPanel } from "./PostOptionsPanel";
-import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "next/navigation";
 import { fetchPostDetail } from "@/lib/apis/social";
 import type { PostDetailResponse } from "@/lib/social/types";
 import { toast } from "sonner";
 
 export function WritePageContent() {
-  // Auth check - redirect to login if not authenticated
-  const { isAuthenticated, isLoading, requireAuth } = useAuth();
-
-  // Redirect to login if not authenticated (reuse requireAuth logic)
-  useEffect(() => {
-    if (!isLoading) {
-      requireAuth("/write");
-    }
-  }, [isLoading, requireAuth]);
-
   const searchParams = useSearchParams();
   const editPostId = searchParams.get("postId") ?? undefined;
   const [initialPost, setInitialPost] = useState<PostDetailResponse | null>(
@@ -93,18 +82,12 @@ export function WritePageContent() {
   // Tag search
   const tagSearch = useTagSearch();
 
-  // Show loading while checking auth
-  if (isLoading || isLoadingInitialPost) {
+  if (isLoadingInitialPost) {
     return (
       <main className="flex h-[calc(100vh-57px)] w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </main>
     );
-  }
-
-  // Don't render if not authenticated (requireAuth will redirect)
-  if (!isAuthenticated) {
-    return null;
   }
 
   if (editPostId && !initialPost) {

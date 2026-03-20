@@ -56,6 +56,7 @@ export function useAuth(): UseAuthReturn {
       const response = await fetch("/api/auth/me", {
         method: "GET",
         credentials: "include",
+        cache: "no-store",
       });
 
       if (response.ok) {
