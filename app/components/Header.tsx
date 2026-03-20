@@ -4,6 +4,7 @@ import { Bell, LogIn, PencilLine, Search, UserPlus } from "lucide-react";
 import { SidebarMenuButtonWrapper } from "@/features/sidebar";
 import { SearchBarCompact } from "@/features/search/components/SearchBar";
 import { getCurrentUserOrNullServer } from "@/lib/server/social";
+import LogoutLink from "./LogoutLink";
 
 type HeaderActionProps = {
   href: string;
@@ -163,14 +164,10 @@ export async function SiteHeader({ children }: SiteHeaderProps) {
                     ))}
 
                     <div className="my-1.5 h-px bg-slate-100" />
-                    <Link
-                      href="/logout"
-                      prefetch={false}
+                    <LogoutLink
                       className="block rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
                       role="menuitem"
-                    >
-                      Logout
-                    </Link>
+                    />
                   </div>
                 </div>
               </>

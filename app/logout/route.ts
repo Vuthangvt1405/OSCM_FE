@@ -1,17 +1,12 @@
-import { AUTH_TOKEN_COOKIE } from "@/lib/auth/constants";
-import { shouldUseSecureCookies } from "@/lib/auth/cookie";
 import { NextResponse } from "next/server";
 
+/**
+ * Safety route for legacy `/logout` navigation.
+ *
+ * Do not mutate auth state on GET.
+ * Real logout must happen via POST `/api/auth/logout`.
+ */
 export async function GET(request: Request) {
-  const secureCookie = shouldUseSecureCookies(request);
   const loginUrl = new URL("/login", request.url);
-  const res = NextResponse.redirect(loginUrl);
-  res.cookies.set(AUTH_TOKEN_COOKIE, "", {
-    httpOnly: true,
-    secure: secureCookie,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-  return res;
+  return NextResponse.redirect(loginUrl);
 }
