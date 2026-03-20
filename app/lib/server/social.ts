@@ -208,6 +208,7 @@ export async function fetchPostDetailServer(
  */
 export async function getCurrentUserOrNullServer(): Promise<CurrentUserResponse | null> {
   const backendBaseUrl = getBackendBaseUrl();
+  console.log(backendBaseUrl);
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_TOKEN_COOKIE)?.value;
 

@@ -31,7 +31,7 @@ export async function GET() {
   if (!upstream.ok) {
     const res = NextResponse.json(payload, { status: upstream.status });
 
-    if (upstream.status === 401) {
+    if (upstream.status === 401 || upstream.status === 403) {
       res.cookies.set(AUTH_TOKEN_COOKIE, "", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
