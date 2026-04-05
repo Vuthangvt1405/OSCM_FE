@@ -5,6 +5,9 @@ export type TopicInfo = {
 
 export type FeedPost = {
   id: string;
+  author?: {
+    authorId: string;
+  };
   authorName: string;
   authorAvatarSrc?: string | null;
   authorRole?: string;

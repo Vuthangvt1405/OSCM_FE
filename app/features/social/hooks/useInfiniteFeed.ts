@@ -50,6 +50,9 @@ function toFeedPost(item: BackendPostFeedItem): FeedPost {
 
   return {
     id: String(item.id),
+    author: item.author?.authorId
+      ? { authorId: item.author.authorId }
+      : undefined,
     authorName,
     authorAvatarSrc: item.authorAvatarSrc ?? null,
     title: item.title,

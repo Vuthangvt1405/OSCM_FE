@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { generateSlugFromTitle } from "@/lib/apis/social";
 import { useReactionToggle } from "@/features/social/hooks/useReactionToggle";
+import { useAuth } from "@/hooks/useAuth";
 
 type FeedCardPost = FeedPost & {
   viewCount?: number;
@@ -122,8 +123,12 @@ function ReactionButtons({
 
 export function FeedCard({ post, href }: FeedCardProps) {
   const router = useRouter();
+  const { session } = useAuth();
   const viewCount = post.viewCount ?? post.score;
   const commentCount = post.commentCount ?? 0;
+  const isOwnPostAuthor = Boolean(
+    session?.userId && post.author?.authorId && session.userId === post.author.authorId,
+  );
   // Use provided href or generate SEO-friendly URL with slug
   const postHref =
     href ?? `/posts/${post.id}/${generateSlugFromTitle(post.title)}`;
@@ -157,6 +162,11 @@ export function FeedCard({ post, href }: FeedCardProps) {
             <div className="truncate text-sm font-medium text-slate-900">
               {post.authorName}
             </div>
+            {isOwnPostAuthor ? (
+              <div className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                Mine
+              </div>
+            ) : null}
             {post.authorRole ? (
               <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                 {post.authorRole}
